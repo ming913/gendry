@@ -2,12 +2,11 @@ package scanner
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"time"
-
-	"fmt"
-	"runtime/debug"
 )
 
 // ByteUnmarshaler is the interface implemented by types
@@ -260,6 +259,15 @@ func bind(result map[string]interface{}, target interface{}) (resp error) {
 
 		valuei := valueObj.Field(i)
 		if !valuei.CanSet() {
+			continue
+		}
+		// support bind for nested struct
+		if valuei.Kind() == reflect.Struct {
+			newObj := reflect.New(valuei.Type())
+			err := bind(result, newObj.Interface())
+			if nil == err {
+				valuei.Set(newObj.Elem())
+			}
 			continue
 		}
 		tagName, ok := lookUpTagName(fieldTypeI)
